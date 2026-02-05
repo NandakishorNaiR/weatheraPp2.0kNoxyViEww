@@ -1,78 +1,158 @@
-# Weather (Django)
 
-A minimal Django-based weather application that provides current weather and air-quality information. This repository contains the Django project, a `weather` app, static assets, and helper scripts for running locally and on Windows.
 
-**Live demo:** https://weatherapp2-0knoxyvieww-1.onrender.com
+# 🌤️ Weather App (Django)
 
-**Key features**
-- Django-based web UI for weather information
-- Services for fetching weather and AQI (`weather/services/*.py`)
-- Simple SQLite database for local development
+A clean, beginner‑friendly Django web app that shows **current weather** and **air quality (AQI)** for a given location. It’s designed to be easy to run locally, simple to understand, and straightforward to deploy.
 
-**Repository structure (high level)**
-- `knoxyview/` — Django project settings and WSGI entry (`knoxyview/settings.py`, `knoxyview/wsgi.py`)
-- `weather/` — Django app: models, views, URLs, templates, static assets
-  - `weather/services/` — `weather_service.py`, `aqi_service.py` used to fetch external data
-  - `weather/templates/weather/` — HTML templates (index page)
-  - `weather/static/` — app static files (JS/CSS)
-- `requirements.txt` — pinned Python dependencies (includes Windows/conditional entries)
-- `serve_waitress.ps1`, `serve_waitress.bat` — convenience scripts to run the app with Waitress on port 8000
+**Live demo:** [https://weatherapp2-0knoxyvieww-1.onrender.com](https://weatherapp2-0knoxyvieww-1.onrender.com)
 
-**Requirements**
-- Python 3.8+ (recommended: 3.11; some pinned packages are version-sensitive)
-- See `requirements.txt` for full dependency list. On Windows, some packages like `pywin32` are only installed for supported Python versions.
+---
 
-**Local development (quick start)**
-1. Create and activate a virtual environment:
+## ✨ What this app does
+
+* Displays current **weather information** in a simple web UI
+* Shows **air quality (AQI)** alongside weather data
+* Uses Django services to keep API logic clean and reusable
+* Works out‑of‑the‑box with SQLite for local development
+* Includes Windows‑friendly production setup using **Waitress**
+
+---
+
+## 🧠 How it’s structured
+
+Here’s a high‑level overview of the repository so you can quickly find your way around:
+
+```
+knoxyview/          # Django project (settings, URLs, WSGI)
+  ├─ settings.py
+  ├─ wsgi.py
+
+weather/            # Main Django app
+  ├─ models.py
+  ├─ views.py
+  ├─ urls.py
+  ├─ services/      # External API logic
+  │   ├─ weather_service.py
+  │   └─ aqi_service.py
+  ├─ templates/
+  │   └─ weather/   # HTML templates
+  └─ static/        # CSS / JS assets
+
+requirements.txt    # Python dependencies
+serve_waitress.ps1  # Run with Waitress (PowerShell)
+serve_waitress.bat  # Run with Waitress (CMD)
+```
+
+The **services** folder is where all external API calls live, keeping views clean and easier to maintain.
+
+---
+
+## 🧩 Requirements
+
+* **Python 3.8+** (recommended: **Python 3.11**)
+* All dependencies are listed in `requirements.txt`
+
+> ⚠️ On Windows, some packages (like `pywin32`) are installed conditionally based on Python version. Stick to the recommended version for fewer surprises.
+
+---
+
+## 🚀 Run locally (quick start)
+
+### 1️⃣ Create & activate a virtual environment
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
-2. Install dependencies:
+
+### 2️⃣ Install dependencies
+
 ```powershell
 python -m pip install -r requirements.txt
 ```
-3. Apply migrations and run the dev server:
+
+### 3️⃣ Run migrations and start the dev server
+
 ```powershell
 python manage.py migrate
 python manage.py runserver 0.0.0.0:8000
 ```
 
-Open http://127.0.0.1:8000 in your browser.
+Now open 👉 **[http://127.0.0.1:8000](http://127.0.0.1:8000)** in your browser.
 
-**Run with Waitress (production-like, Windows friendly)**
-The repo includes `serve_waitress.ps1` and `serve_waitress.bat` which run the app on port 8000 using Waitress.
+---
 
-PowerShell:
+## 🏭 Run with Waitress (production‑like, Windows‑friendly)
+
+This project includes ready‑to‑use scripts to run the app using **Waitress**, which works well on Windows.
+
+### PowerShell
+
 ```powershell
 python -m pip install -r requirements.txt
 .\serve_waitress.ps1
 ```
 
-CMD:
+### CMD
+
 ```bat
 python -m pip install -r requirements.txt
 serve_waitress.bat
 ```
 
-Or run directly:
+### Or run directly
+
 ```powershell
 waitress-serve --host=0.0.0.0 --port=8000 knoxyview.wsgi:application
 ```
 
-**Deployment notes (Render.com)**
-- The project was deployed to Render at the live URL above. `knoxyview/settings.py` loads `ALLOWED_HOSTS` from the `ALLOWED_HOSTS` environment variable and defaults to allowing `.onrender.com`.
-- If you deploy to another host, set the `ALLOWED_HOSTS` env var (comma-separated), e.g. `weatherapp2-0knoxyvieww-1.onrender.com,localhost,127.0.0.1`.
-- For production consider:
-  - Turning `DEBUG = False` and configuring `SECRET_KEY` via environment variables
-  - Using a production database (Postgres) and configuring static file hosting (S3 or Render static files)
+---
 
-**Scripts and helpers**
-- `serve_waitress.ps1` — PowerShell helper to run Waitress on port 8000
-- `serve_waitress.bat` — Windows CMD helper to run Waitress on port 8000
+## ☁️ Deployment notes (Render.com)
 
-**Notes & troubleshooting**
-- `gunicorn` is Unix-only and depends on `fcntl`; it will not run on Windows. Use Waitress on Windows or run `gunicorn` inside WSL/Linux.
-- If you see `DisallowedHost` errors on deployment, add the host to `ALLOWED_HOSTS` or set the `ALLOWED_HOSTS` env var on your hosting provider.
+This app is deployed on **Render**, and the live demo is available at the link above.
 
-If you'd like, I can expand any section (detailed API, screenshots, or CI/deploy steps) or add a small `CONTRIBUTING.md` or `NOTES.md` file.
+* `ALLOWED_HOSTS` is loaded from an environment variable
+* By default, `.onrender.com` is allowed
+
+Example:
+
+```env
+ALLOWED_HOSTS=weatherapp2-0knoxyvieww-1.onrender.com,localhost,127.0.0.1
+```
+
+### For a real production setup, consider:
+
+* Setting `DEBUG = False`
+* Moving `SECRET_KEY` to environment variables
+* Using PostgreSQL instead of SQLite
+* Serving static files via Render or an object store (S3, etc.)
+
+---
+
+## 🛠 Scripts & helpers
+
+* `serve_waitress.ps1` — Run the app with Waitress (PowerShell)
+* `serve_waitress.bat` — Run the app with Waitress (CMD)
+
+---
+
+## 🧪 Notes & troubleshooting
+
+* **Gunicorn does not work on Windows** (depends on `fcntl`)
+
+  * Use **Waitress** on Windows
+  * Or run Gunicorn inside **WSL / Linux**
+
+* If you see a `DisallowedHost` error:
+
+  * Add the domain to `ALLOWED_HOSTS`
+  * Or set the `ALLOWED_HOSTS` environment variable on your host
+
+---
+
+## 🙌 Final thoughts
+
+This project is meant to be **simple, readable, and practical**—great for learning Django, deploying a real app, or extending with features like forecasts, maps, or user preferences.
+
+Feel free to fork it, break it, and improve it 🚀
