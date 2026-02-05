@@ -14,11 +14,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'replace-me')
 DEBUG = True
-ALLOWED_HOSTS = [
-	'weatherapp2-0knoxyvieww.onrender.com',
-    'localhost',
-    '127.0.0.1'
-]
+# Allow hosts from environment, default to onrender wildcard + localhost
+_allowed = os.environ.get('ALLOWED_HOSTS', '.onrender.com,localhost,127.0.0.1')
+ALLOWED_HOSTS = [h.strip() for h in _allowed.split(',') if h.strip()]
 
 # Applications
 INSTALLED_APPS = [
