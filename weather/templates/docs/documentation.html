@@ -1,0 +1,161 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>KnoxyView Weather — Documentation</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+  /* Embedded weather-ui.css */
+  :root {
+    --bg: #0f172a;
+    --panel: #111827;
+    --muted: #94a3b8;
+    --accent-1: #60a5fa;
+    --accent-2: #34d399;
+    --glass: rgba(255, 255, 255, 0.04);
+    --card: #0b1220;
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    background: linear-gradient(135deg, var(--bg) 0%, #1e293b 100%);
+    color: #e6eef6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .container {
+    max-width: 980px;
+    margin: 40px auto;
+    padding: 28px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    box-shadow: 0 8px 30px rgba(2, 6, 23, 0.6)
+  }
+
+  h1 {
+    font-size: 1.9rem;
+    margin-bottom: 6px;
+    color: #f1f5f9
+  }
+
+  h2 {
+    color: var(--accent-1);
+    margin-top: 20px
+  }
+
+  p,
+  li,
+  pre,
+  code {
+    color: var(--muted);
+    line-height: 1.6
+  }
+
+  pre {
+    background: #071024;
+    border-radius: 10px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    color: #cbd5e1;
+    overflow: auto
+  }
+
+  .button {
+    display: inline-block;
+    margin-top: 16px;
+    background: linear-gradient(90deg, var(--accent-1), #2563eb);
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600
+  }
+
+  .button.secondary {
+    background: linear-gradient(90deg, #10b981, #059669)
+  }
+
+  footer {
+    margin-top: 28px;
+    color: var(--muted);
+    text-align: center
+  }
+
+
+  /* Make docs look more like app with subtle spacing */
+
+  .container ul {
+    padding-left: 20px
+  }
+
+  .container ol {
+    padding-left: 20px
+  }
+
+
+  /* Responsive */
+
+  @media (max-width:600px) {
+    .container {
+      margin: 20px;
+      padding: 18px
+    }
+  }
+  /* End embedded weather-ui.css */
+    </style>
+</head>
+<body>
+  <div class="container">
+    <h1>KnoxyView Weather — Documentation</h1>
+    <p>Web dashboard that shows current weather, forecast, UV index and air quality (WAQI).</p>
+
+    <h2>Quick Start (Windows)</h2>
+    <ol>
+      <li>Create and activate a virtual environment:
+        <pre>python -m venv .venv
+.\.venv\Scripts\Activate.ps1</pre>
+      </li>
+      <li>Install dependencies:
+        <pre>pip install -r requirements.txt</pre>
+      </li>
+      <li>Copy and edit environment variables:
+        <pre>copy .env.example .env</pre>
+      </li>
+      <li>Run migrations and start dev server:
+        <pre>python manage.py migrate
+python manage.py runserver</pre>
+      </li>
+    </ol>
+
+    <h2>Key UI Notes</h2>
+    <ul>
+      <li><strong>Theme:</strong> Light/Dark toggle persists in <code>localStorage</code>.</li>
+      <li><strong>AQI:</strong> WAQI is the primary source; provider AQI is used as a fallback.</li>
+      <li><strong>Badges:</strong> Weather badges are generated server-side and shown under temperature.</li>
+    </ul>
+
+    <h2>Files of Interest</h2>
+    <ul>
+      <li><code>weather/views.py</code> — data fetching and AQI logic</li>
+      <li><code>weather/templates/weather/index.html</code> — main UI</li>
+      <li><code>docs/README.md</code> — markdown version of this documentation</li>
+    </ul>
+
+    <a class="button" href="/">Back to app</a>
+
+    <footer>
+      <p>KnoxyView — local documentation</p>
+    </footer>
+  </div>
+</body>
+</html>

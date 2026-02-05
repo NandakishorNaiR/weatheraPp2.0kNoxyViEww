@@ -1,0 +1,158 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>KnoxyView Weather — Terms of Service</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+  /* Embedded weather-ui.css */
+  :root {
+    --bg: #0f172a;
+    --panel: #111827;
+    --muted: #94a3b8;
+    --accent-1: #60a5fa;
+    --accent-2: #34d399;
+    --glass: rgba(255, 255, 255, 0.04);
+    --card: #0b1220;
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    background: linear-gradient(135deg, var(--bg) 0%, #1e293b 100%);
+    color: #e6eef6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .container {
+    max-width: 980px;
+    margin: 40px auto;
+    padding: 28px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    box-shadow: 0 8px 30px rgba(2, 6, 23, 0.6)
+  }
+
+  h1 {
+    font-size: 1.9rem;
+    margin-bottom: 6px;
+    color: #f1f5f9
+  }
+
+  h2 {
+    color: var(--accent-1);
+    margin-top: 20px
+  }
+
+  p,
+  li,
+  pre,
+  code {
+    color: var(--muted);
+    line-height: 1.6
+  }
+
+  pre {
+    background: #071024;
+    border-radius: 10px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    color: #cbd5e1;
+    overflow: auto
+  }
+
+  .button {
+    display: inline-block;
+    margin-top: 16px;
+    background: linear-gradient(90deg, var(--accent-1), #2563eb);
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600
+  }
+
+  .button.secondary {
+    background: linear-gradient(90deg, #10b981, #059669)
+  }
+
+  footer {
+    margin-top: 28px;
+    color: var(--muted);
+    text-align: center
+  }
+
+
+  /* Make docs look more like app with subtle spacing */
+
+  .container ul {
+    padding-left: 20px
+  }
+
+  .container ol {
+    padding-left: 20px
+  }
+
+
+  /* Responsive */
+
+  @media (max-width:600px) {
+    .container {
+      margin: 20px;
+      padding: 18px
+    }
+  }
+  /* End embedded weather-ui.css */
+    </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Terms of Service</h1>
+    <p>Last updated: January 2026</p>
+
+    <h2>1. Use of the Application</h2>
+    <p>This application is provided for informational purposes only. Weather data is obtained from third-party APIs and may not always be accurate or up to date.</p>
+    <p>You agree to use this application only for lawful purposes and in a way that does not harm, disable, or impair the service.</p>
+
+    <h2>2. No Warranties</h2>
+    <p>The application is provided “as is” and “as available”, without warranties of any kind, express or implied. We do not guarantee accuracy or continuous availability.</p>
+
+    <h2>3. Limitation of Liability</h2>
+    <p>The developer shall not be held liable for any loss, damage, or inconvenience resulting from the use of this application.</p>
+
+    <h2>4. Third-Party Services</h2>
+    <p>This application relies on third-party services such as weather APIs and hosting providers. We are not responsible for their content or availability.</p>
+
+    <h2>5. Changes to the Service</h2>
+    <p>The application may be modified, updated, or discontinued at any time without prior notice.</p>
+
+    <h2>6. Changes to These Terms</h2>
+    <p>These Terms of Service may be updated in the future. Continued use of the application after changes implies acceptance of the updated terms.</p>
+
+    <h2>7. Governing Law</h2>
+    <p>These terms shall be governed in accordance with applicable local laws.</p>
+
+    <h2>Contact</h2>
+    <p>If you have questions, feedback, or issues regarding this project:</p>
+    <ul>
+      <li>GitHub: Open an issue or discussion in the repository</li>
+      <li>Developer: Repository owner (via GitHub profile)</li>
+    </ul>
+
+    <a class="button" href="/">Back to app</a>
+
+    <footer>
+      <p>KnoxyView — terms of service</p>
+    </footer>
+  </div>
+</body>
+</html>
