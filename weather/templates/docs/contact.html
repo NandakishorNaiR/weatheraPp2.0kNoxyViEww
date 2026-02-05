@@ -1,0 +1,136 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>KnoxyView Weather — Contact</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+  /* Embedded weather-ui.css */
+  :root {
+    --bg: #0f172a;
+    --panel: #111827;
+    --muted: #94a3b8;
+    --accent-1: #60a5fa;
+    --accent-2: #34d399;
+    --glass: rgba(255, 255, 255, 0.04);
+    --card: #0b1220;
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    background: linear-gradient(135deg, var(--bg) 0%, #1e293b 100%);
+    color: #e6eef6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .container {
+    max-width: 980px;
+    margin: 40px auto;
+    padding: 28px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    box-shadow: 0 8px 30px rgba(2, 6, 23, 0.6)
+  }
+
+  h1 {
+    font-size: 1.9rem;
+    margin-bottom: 6px;
+    color: #f1f5f9
+  }
+
+  h2 {
+    color: var(--accent-1);
+    margin-top: 20px
+  }
+
+  p,
+  li,
+  pre,
+  code {
+    color: var(--muted);
+    line-height: 1.6
+  }
+
+  pre {
+    background: #071024;
+    border-radius: 10px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    color: #cbd5e1;
+    overflow: auto
+  }
+
+  .button {
+    display: inline-block;
+    margin-top: 16px;
+    background: linear-gradient(90deg, var(--accent-1), #2563eb);
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600
+  }
+
+  .button.secondary {
+    background: linear-gradient(90deg, #10b981, #059669)
+  }
+
+  footer {
+    margin-top: 28px;
+    color: var(--muted);
+    text-align: center
+  }
+
+
+  /* Make docs look more like app with subtle spacing */
+
+  .container ul {
+    padding-left: 20px
+  }
+
+  .container ol {
+    padding-left: 20px
+  }
+
+
+  /* Responsive */
+
+  @media (max-width:600px) {
+    .container {
+      margin: 20px;
+      padding: 18px
+    }
+  }
+  /* End embedded weather-ui.css */
+    </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Contact Us</h1>
+    <p>If you have questions, feedback, or issues regarding this project:</p>
+    <ul>
+      <li>GitHub: Open an issue or discussion in the repository</li>
+      <li>Developer: Repository owner (via GitHub profile)</li>
+    </ul>
+    <p>This project is open-source, and community feedback is welcome.</p>
+
+    <a class="button" href="https://github.com/" target="_blank" rel="noopener">Open repository on GitHub</a>
+
+    <a class="button" href="/">Back to app</a>
+
+    <footer>
+      <p>KnoxyView — contact</p>
+    </footer>
+  </div>
+</body>
+</html>

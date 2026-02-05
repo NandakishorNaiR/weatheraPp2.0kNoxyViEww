@@ -1,0 +1,1775 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KnoxyView Weather App</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 0;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        body.colorblind-mode {
+            background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%);
+            color: #333;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .app-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #60a5fa, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Search Section */
+        .search-section {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 250px;
+            padding: 14px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(30, 41, 59, 0.6);
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+            background: rgba(30, 41, 59, 0.8);
+        }
+
+        .search-button, .location-button {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .search-button {
+            background: linear-gradient(to right, #3b82f6, #2563eb);
+        }
+
+        .search-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .location-button {
+            background: linear-gradient(to right, #10b981, #059669);
+        }
+
+        .location-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        /* Main Container */
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 24px 40px;
+        }
+
+        /* Current Weather Hero Section */
+        .hero-section {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .hero-content {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .hero-left {
+            text-align: center;
+        }
+
+        .weather-icon-large img {
+            width: 140px;
+            height: 140px;
+        }
+
+        .hero-center {
+            text-align: center;
+        }
+
+        .location-name {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin-bottom: 8px;
+        }
+
+        .date-info {
+            color: #94a3b8;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+
+        .temperature-display {
+            font-size: 5.5rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin: 20px 0;
+            text-shadow: 0 2px 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .description-display {
+            font-size: 1.8rem;
+            color: #94a3b8;
+            text-transform: capitalize;
+        }
+
+        .hero-right {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .quick-stat {
+            background: rgba(51, 65, 85, 0.4);
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .quick-stat:hover {
+            transform: translateY(-3px);
+            background: rgba(51, 65, 85, 0.6);
+        }
+
+        .quick-stat i {
+            font-size: 1.5rem;
+            color: #60a5fa;
+            margin-bottom: 8px;
+        }
+
+        .quick-stat p {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 4px;
+        }
+
+        .quick-stat h4 {
+            font-size: 1.3rem;
+            color: #e2e8f0;
+        }
+
+        /* Detailed Weather Grid */
+        .detailed-weather {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .section-header {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .weather-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+        }
+
+        .weather-item {
+            background: rgba(51, 65, 85, 0.4);
+            padding: 24px;
+            border-radius: 16px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .weather-item:hover {
+            transform: translateY(-3px);
+            background: rgba(51, 65, 85, 0.6);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .weather-item i {
+            font-size: 1.8rem;
+            color: #60a5fa;
+            margin-bottom: 12px;
+        }
+
+        .weather-item p {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+
+        .weather-item h3 {
+            font-size: 1.4rem;
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+
+        /* UV Index Section */
+        .uv-section {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .uv-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .uv-display {
+            text-align: center;
+        }
+
+        .uv-value {
+            font-size: 6rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin: 20px 0;
+        }
+
+        .uv-risk-badge {
+            display: inline-block;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin: 16px 0;
+        }
+
+        .uv-risk-badge.green {
+            background: rgba(34, 197, 94, 0.3);
+            color: #4ade80;
+            border: 2px solid #4ade80;
+        }
+
+        .uv-risk-badge.yellow {
+            background: rgba(234, 179, 8, 0.3);
+            color: #fbbf24;
+            border: 2px solid #fbbf24;
+        }
+
+        .uv-risk-badge.orange {
+            background: rgba(249, 115, 22, 0.3);
+            color: #fb923c;
+            border: 2px solid #fb923c;
+        }
+
+        .uv-risk-badge.red {
+            background: rgba(239, 68, 68, 0.3);
+            color: #f87171;
+            border: 2px solid #f87171;
+        }
+
+        .uv-risk-badge.purple {
+            background: rgba(168, 85, 247, 0.3);
+            color: #a78bfa;
+            border: 2px solid #a78bfa;
+        }
+
+        .uv-recommendation {
+            background: rgba(51, 65, 85, 0.4);
+            padding: 24px;
+            border-radius: 16px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+
+        /* Air Quality Section */
+        .air-quality-section {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .aqi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .aqi-display {
+            text-align: center;
+            flex: 1;
+        }
+
+        .aqi-value {
+            font-size: 5rem;
+            font-weight: 700;
+            margin: 20px 0;
+        }
+
+        .aqi-value.good { color: #4ade80; }
+        .aqi-value.moderate { color: #fbbf24; }
+        .aqi-value.unhealthy-sensitive { color: #fb923c; }
+        .aqi-value.unhealthy { color: #f87171; }
+        .aqi-value.very-unhealthy { color: #a78bfa; }
+        .aqi-value.hazardous { color: #991b1b; }
+
+        .aqi-label {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .pollutants-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
+            margin-top: 32px;
+        }
+
+        .pollutant-item {
+            background: rgba(51, 65, 85, 0.4);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .pollutant-item:hover {
+            transform: translateY(-2px);
+            background: rgba(51, 65, 85, 0.6);
+        }
+
+        .pollutant-item p {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+
+        .pollutant-item h4 {
+            font-size: 1.3rem;
+            color: #e2e8f0;
+        }
+
+        .aqi-recommendation {
+            background: rgba(51, 65, 85, 0.4);
+            padding: 24px;
+            border-radius: 16px;
+            margin-top: 32px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+
+        /* Forecast Section - Modern Design */
+        .forecast-section {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .forecast-days {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .forecast-day {
+            background: rgba(51, 65, 85, 0.3);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .forecast-day:hover {
+            background: rgba(51, 65, 85, 0.4);
+            border-color: rgba(96, 165, 250, 0.3);
+        }
+
+        .forecast-day-header {
+            padding: 20px 24px;
+            background: rgba(51, 65, 85, 0.4);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .forecast-day-header:hover {
+            background: rgba(51, 65, 85, 0.5);
+        }
+
+        .forecast-day-header.active {
+            background: rgba(96, 165, 250, 0.2);
+            border-bottom: 1px solid rgba(96, 165, 250, 0.3);
+        }
+
+        .day-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .day-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+
+        .day-date {
+            font-size: 0.95rem;
+            color: #94a3b8;
+        }
+
+        .day-summary {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .day-temp-range {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .day-temp-high {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+
+        .day-temp-low {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #94a3b8;
+        }
+
+        .day-icon {
+            width: 50px;
+            height: 50px;
+        }
+
+        .day-toggle {
+            color: #60a5fa;
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .forecast-day-header.active .day-toggle {
+            transform: rotate(180deg);
+        }
+
+        .forecast-timeline {
+            display: none;
+            padding: 24px;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .forecast-day.active .forecast-timeline {
+            display: block;
+        }
+
+        .forecast-timeline::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .forecast-timeline::-webkit-scrollbar-track {
+            background: rgba(51, 65, 85, 0.3);
+            border-radius: 10px;
+        }
+
+        .forecast-timeline::-webkit-scrollbar-thumb {
+            background: rgba(96, 165, 250, 0.5);
+            border-radius: 10px;
+        }
+
+        .timeline-container {
+            display: flex;
+            gap: 16px;
+            min-width: max-content;
+            padding-bottom: 8px;
+        }
+
+        .forecast-hour-card {
+            background: rgba(51, 65, 85, 0.4);
+            border-radius: 16px;
+            padding: 20px;
+            min-width: 160px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .forecast-hour-card:hover {
+            transform: translateY(-5px);
+            background: rgba(51, 65, 85, 0.6);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            border-color: rgba(96, 165, 250, 0.3);
+        }
+
+        .forecast-hour-card.expanded {
+            background: rgba(51, 65, 85, 0.7);
+            border-color: rgba(96, 165, 250, 0.5);
+        }
+
+        .hour-time {
+            font-size: 0.9rem;
+            color: #60a5fa;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .hour-icon {
+            width: 60px;
+            height: 60px;
+            margin: 12px auto;
+        }
+
+        .hour-temp {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin: 12px 0;
+        }
+
+        .hour-desc {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 12px;
+            text-transform: capitalize;
+            min-height: 40px;
+        }
+
+        .hour-quick-info {
+            display: flex;
+            justify-content: space-around;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .hour-quick-item {
+            flex: 1;
+            text-align: center;
+        }
+
+        .hour-quick-item i {
+            font-size: 0.9rem;
+            color: #60a5fa;
+            margin-bottom: 4px;
+        }
+
+        .hour-quick-item span {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            display: block;
+        }
+
+        .hour-details {
+            display: none;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            text-align: left;
+        }
+
+        .forecast-hour-card.expanded .hour-details {
+            display: grid;
+        }
+
+        .hour-detail-item {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .hour-detail-item strong {
+            color: #e2e8f0;
+            display: block;
+            margin-bottom: 4px;
+            font-size: 0.85rem;
+        }
+
+        .rain-chance {
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-weight: 600;
+            display: inline-block;
+            font-size: 0.85rem;
+        }
+
+        .rain-chance.low {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+        }
+
+        .rain-chance.moderate {
+            background: rgba(234, 179, 8, 0.2);
+            color: #fbbf24;
+        }
+
+        .rain-chance.high {
+            background: rgba(249, 115, 22, 0.2);
+            color: #fb923c;
+        }
+
+        .day-rain-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .day-rain-icon {
+            color: #60a5fa;
+        }
+
+        /* Weather Maps Section */
+        .weather-maps-section {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .map-controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .map-layer-btn {
+            padding: 12px 24px;
+            background: rgba(51, 65, 85, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .map-layer-btn:hover {
+            background: rgba(51, 65, 85, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .map-layer-btn.active {
+            background: linear-gradient(to right, #3b82f6, #2563eb);
+            border-color: #3b82f6;
+        }
+
+        #weather-map {
+            width: 100%;
+            height: 500px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .map-legend {
+            margin-top: 20px;
+            padding: 16px;
+            background: rgba(51, 65, 85, 0.4);
+            border-radius: 12px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 0.95rem;
+        }
+
+        /* Accessibility Controls */
+        .accessibility-controls {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 32px 0;
+            flex-wrap: wrap;
+        }
+
+        .control-button {
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: none;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .voice-button { background: linear-gradient(to right, #8b5cf6, #6d28d9); }
+        .colorblind-button { background: linear-gradient(to right, #ec4899, #db2777); }
+        .light-mode-button { background: linear-gradient(to right, #06b6d4, #3b82f6); }
+
+        /* Error Message */
+        .error-message {
+            text-align: center;
+            padding: 60px 40px;
+            color: #f87171;
+            font-size: 1.2rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 40px 24px;
+            background: rgba(15, 23, 42, 0.8);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 60px;
+            backdrop-filter: blur(10px);
+            color: #94a3b8;
+        }
+
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .back-to-top {
+            padding: 12px 24px;
+            background: linear-gradient(to right, #3b82f6, #2563eb);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .back-to-top:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .footer-links {
+            margin: 24px 0;
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: #60a5fa;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: #93c5fd;
+        }
+
+        .social-links {
+            margin: 24px 0;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .social-links a {
+            color: #60a5fa;
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .social-links a:hover {
+            transform: translateY(-3px);
+        }
+
+        /* Colorblind Mode Adjustments */
+        body.colorblind-mode .hero-section,
+        body.colorblind-mode .detailed-weather,
+        body.colorblind-mode .uv-section,
+        body.colorblind-mode .air-quality-section,
+        body.colorblind-mode .forecast-section,
+        body.colorblind-mode .weather-maps-section {
+            background: rgba(255, 255, 255, 0.9);
+            border-color: rgba(0, 0, 0, 0.1);
+            color: #333;
+        }
+
+        body.colorblind-mode .weather-item,
+        body.colorblind-mode .forecast-card,
+        body.colorblind-mode .quick-stat,
+        body.colorblind-mode .pollutant-item {
+            background: rgba(255, 255, 255, 0.9);
+            border-color: rgba(0, 0, 0, 0.1);
+            color: #333;
+        }
+
+        body.colorblind-mode .search-input {
+            background: rgba(255, 255, 255, 0.9);
+            border-color: rgba(0, 0, 0, 0.1);
+            color: #333;
+        }
+
+        /* Light Mode (Toggle) */
+        body.light-mode {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            color: #0f172a;
+        }
+
+        body.light-mode .hero-section,
+        body.light-mode .detailed-weather,
+        body.light-mode .uv-section,
+        body.light-mode .air-quality-section,
+        body.light-mode .forecast-section,
+        body.light-mode .weather-maps-section {
+            background: #ffffff;
+            border-color: rgba(15, 23, 42, 0.06);
+            color: #0f172a;
+            box-shadow: 0 1px 4px rgba(2,6,23,0.04);
+        }
+
+        body.light-mode .weather-item,
+        body.light-mode .forecast-card,
+        body.light-mode .quick-stat,
+        body.light-mode .pollutant-item {
+            background: #ffffff;
+            border-color: rgba(2,6,23,0.04);
+            color: #0f172a;
+        }
+
+        body.light-mode .search-input {
+            background: #ffffff;
+            border-color: rgba(2,6,23,0.06);
+            color: #0f172a;
+        }
+
+        /* Force displayed details to dark/black for readability in light mode */
+        body.light-mode .app-title,
+        body.light-mode .location-name,
+        body.light-mode .date-info,
+        body.light-mode .temperature-display,
+        body.light-mode .description-display,
+        body.light-mode .weather-badge .label,
+        body.light-mode .quick-stat p,
+        body.light-mode .quick-stat h4,
+        body.light-mode .weather-item p,
+        body.light-mode .weather-item h3,
+        body.light-mode .section-header,
+        body.light-mode .uv-value,
+        body.light-mode .uv-risk-badge,
+        body.light-mode .aqi-label,
+        body.light-mode .pollutant-item p,
+        body.light-mode .pollutant-item h4,
+        body.light-mode .forecast-day .day-name,
+        body.light-mode .forecast-day .day-date,
+        body.light-mode .hour-time,
+        body.light-mode .hour-temp,
+        body.light-mode .hour-desc,
+        body.light-mode footer,
+        body.light-mode .footer-content,
+        body.light-mode .footer-links a,
+        body.light-mode .social-links a {
+            color: #000 !important;
+        }
+
+        /* Toned down secondary text for readability */
+        body.light-mode .date-info,
+        body.light-mode .description-display,
+        body.light-mode .quick-stat p,
+        body.light-mode .weather-item p,
+        body.light-mode .pollutant-item p,
+        body.light-mode .map-legend {
+            color: #334155 !important;
+        }
+
+        /* Ensure AQI recommendation text is clearly visible in light mode */
+        body.light-mode .aqi-recommendation {
+            color: #000 !important;
+        }
+
+        body.light-mode .aqi-recommendation strong {
+            color: #000 !important;
+        }
+
+        /* Header and footer light-mode backgrounds */
+        body.light-mode .header {
+            background: rgba(255,255,255,0.9);
+            border-bottom: 1px solid rgba(2,6,23,0.06);
+            color: #000;
+        }
+
+        body.light-mode footer {
+            background: rgba(255,255,255,0.95);
+            color: #000;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .hero-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .hero-right {
+                grid-template-columns: repeat(4, 1fr);
+            }
+
+            .uv-content {
+                grid-template-columns: 1fr;
+            }
+
+            .aqi-header {
+                flex-direction: column;
+                gap: 24px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .search-form {
+                flex-direction: column;
+            }
+
+            .search-input {
+                width: 100%;
+            }
+
+            .hero-right {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .weather-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .forecast-day-header {
+                flex-direction: column;
+                gap: 16px;
+                align-items: flex-start;
+            }
+
+            .day-summary {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .timeline-container {
+                gap: 12px;
+            }
+
+            .forecast-hour-card {
+                min-width: 140px;
+            }
+
+            .pollutants-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .temperature-display {
+                font-size: 4rem;
+            }
+
+            .location-name {
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero-section,
+            .detailed-weather,
+            .uv-section,
+            .air-quality-section,
+            .forecast-section,
+            .weather-maps-section {
+                padding: 24px;
+            }
+
+            .weather-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pollutants-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        /* Weather badge styles */
+        .weather-badge { display:flex; align-items:center; gap:8px; }
+        .weather-badge .icon { font-size:1.2rem; margin-right:6px; }
+        .weather-badge .label { color:#94a3b8; font-weight:600; }
+        .weather-badge.clear .icon { color:#ffd166 }
+        .weather-badge.cloudy .icon { color:#cbd5e1 }
+        .weather-badge.rain .icon { color:#3b82f6 }
+        .weather-badge.snow .icon { color:#7dd3fc }
+        .weather-badge.thunder .icon { color:#f97316 }
+        .weather-badge.hazy .icon { color:#94a3b8 }
+        .weather-badge.windy .icon { color:#60a5fa }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="app-title">KnoxyView</div>
+        </div>
+    </header>
+
+    <!-- Search Section -->
+    <section class="search-section">
+        <form method="get" action="{% url 'fetch_weather' %}" class="search-form">
+            <input type="text" name="city" placeholder="Enter a city name..." required class="search-input" value="{{ city|default:'' }}">
+            <button type="submit" class="search-button">
+                <i class="fas fa-search"></i> Search
+            </button>
+            <button type="button" class="location-button" id="getLocation">
+                <i class="fas fa-location-dot"></i> My Location
+            </button>
+        </form>
+    </section>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        {% if current_weather %}
+            <!-- Hero Section - Current Weather -->
+            <section class="hero-section">
+                <div class="hero-content">
+                    <div class="hero-left">
+                        <div class="weather-icon-large">
+                            <img src="https://openweathermap.org/img/wn/{{ current_weather.icon }}@2x.png" alt="Weather Icon">
+                        </div>
+                    </div>
+                    <div class="hero-center">
+                        <h1 class="location-name">{{ city|title }}</h1>
+                        <div class="date-info">{{ day }}, {{ date }}</div>
+                        <div style="display:flex;align-items:center;gap:12px;justify-content:center;">
+                            <div style="display:flex;flex-direction:column;align-items:center;">
+                                <div class="temperature-display">{{ current_weather.temperature }}&deg;C</div>
+                                <div style="margin-top:6px;" class="weather-badge {{ current_weather.badge.type }}">
+                                    <i class="fas {{ current_weather.badge.icon }} icon"></i>
+                                    <span class="label">{{ current_weather.badge.label }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="description-display">{{ current_weather.description }}</div>
+                    </div>
+                    <div class="hero-right">
+                        <div class="quick-stat">
+                            <i class="fas fa-thermometer-half"></i>
+                            <p>Feels Like</p>
+                            <h4>{{ current_weather.real_feel }}&deg;C</h4>
+                        </div>
+                        <div class="quick-stat">
+                            <i class="fas fa-tint"></i>
+                            <p>Humidity</p>
+                            <h4>{{ current_weather.humidity }}%</h4>
+                        </div>
+                        <div class="quick-stat">
+                            <i class="fas fa-wind"></i>
+                            <p>Wind Speed</p>
+                            <h4>{{ current_weather.wind_speed }} m/s</h4>
+                        </div>
+                        <div class="quick-stat">
+                            <i class="fas fa-compress-alt"></i>
+                            <p>Pressure</p>
+                            <h4>{{ current_weather.pressure }} hPa</h4>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Detailed Weather Grid -->
+            <section class="detailed-weather">
+                <h2 class="section-header">
+                    <i class="fas fa-info-circle"></i> Detailed Weather Information
+                </h2>
+                <div class="weather-grid">
+                    <div class="weather-item">
+                        <i class="fas fa-compass"></i>
+                        <p>Wind Direction</p>
+                        <h3>{{ current_weather.wind_direction|default:"N/A" }}</h3>
+                    </div>
+                    <div class="weather-item">
+                        <i class="fas fa-wind"></i>
+                        <p>Wind Gust</p>
+                        <h3>{{ current_weather.wind_gust|default:"N/A" }} m/s</h3>
+                    </div>
+                    <div class="weather-item">
+                        <i class="fas fa-eye"></i>
+                        <p>Visibility</p>
+                        <h3>{{ current_weather.visibility }} km</h3>
+                    </div>
+                    <div class="weather-item">
+                        <i class="fas fa-cloud"></i>
+                        <p>Cloud Coverage</p>
+                        <h3>{{ current_weather.clouds }}%</h3>
+                    </div>
+                    <div class="weather-item">
+                        <i class="fas fa-sun"></i>
+                        <p>Sunrise</p>
+                        <h3>{{ current_weather.sunrise }}</h3>
+                    </div>
+                    <div class="weather-item">
+                        <i class="fas fa-moon"></i>
+                        <p>Sunset</p>
+                        <h3>{{ current_weather.sunset }}</h3>
+                    </div>
+                    <div class="weather-item">
+                        <i class="fas fa-globe"></i>
+                        <p>Country</p>
+                        <h3>{{ current_weather.country|default:"N/A" }}</h3>
+                    </div>
+                    <div class="weather-item">
+                        <i class="fas fa-clock"></i>
+                        <p>Time of Day</p>
+                        <h3>{% if current_weather.is_daytime %}Day{% else %}Night{% endif %}</h3>
+                    </div>
+                </div>
+            </section>
+
+            <!-- UV Index Section -->
+            {% if uv_index %}
+            <section class="uv-section">
+                <h2 class="section-header">
+                    <i class="fas fa-sun"></i> UV Index
+                </h2>
+                <div class="uv-content">
+                    <div class="uv-display">
+                        <div class="uv-value">{{ uv_index.value }}</div>
+                        <div class="uv-risk-badge {{ uv_index.risk_color }}">
+                            {{ uv_index.risk_level }} Risk
+                        </div>
+                    </div>
+                    <div class="uv-recommendation">
+                        {% if uv_index.risk_level == "Low" %}
+                            <strong>🌤️ Minimal Protection Needed</strong><br>
+                            You can safely enjoy outdoor activities with minimal sun protection.
+                        {% elif uv_index.risk_level == "Moderate" %}
+                            <strong>☀️ Moderate Protection Required</strong><br>
+                            Wear SPF 30+ sunscreen, a hat, and sunglasses. Seek shade during midday hours.
+                        {% elif uv_index.risk_level == "High" %}
+                            <strong>⚠️ High Protection Required</strong><br>
+                            Wear SPF 50+ sunscreen, protective clothing, and limit sun exposure between 10 AM and 4 PM.
+                        {% elif uv_index.risk_level == "Very High" %}
+                            <strong>🚨 Very High Risk</strong><br>
+                            Avoid sun exposure between 10 AM and 4 PM. If outdoors, use SPF 50+ and cover up completely.
+                        {% else %}
+                            <strong>⛔ Extreme Risk</strong><br>
+                            Stay indoors if possible. If you must go outside, use maximum protection and minimize exposure time.
+                        {% endif %}
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- Air Quality Section -->
+            {% if air_quality %}
+            <section class="air-quality-section">
+                <h2 class="section-header">
+                    <i class="fas fa-wind"></i> Air Quality Index
+                </h2>
+                <div class="aqi-header">
+                    {% if air_quality.aqi %}
+                    <div class="aqi-display">
+                        <div class="aqi-value {% if air_quality.aqi <= 50 %}good{% elif air_quality.aqi <= 100 %}moderate{% elif air_quality.aqi <= 150 %}unhealthy-sensitive{% elif air_quality.aqi <= 200 %}unhealthy{% elif air_quality.aqi <= 300 %}very-unhealthy{% else %}hazardous{% endif %}">
+                            {{ air_quality.aqi }}
+                        </div>
+                        <div class="aqi-label">
+                            {% if air_quality.aqi <= 50 %}
+                                Good
+                            {% elif air_quality.aqi <= 100 %}
+                                Moderate
+                            {% elif air_quality.aqi <= 150 %}
+                                Unhealthy for Sensitive Groups
+                            {% elif air_quality.aqi <= 200 %}
+                                Unhealthy
+                            {% elif air_quality.aqi <= 300 %}
+                                Very Unhealthy
+                            {% else %}
+                                Hazardous
+                            {% endif %}
+                        </div>
+                        <div style="font-size:0.85rem; color:#94a3b8; margin-top:4px;">
+                            Note: WAQI values follow European/continental AQI standards.
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="aqi-display">
+                        <div class="aqi-value unknown">N/A</div>
+                        <div class="aqi-label">Unknown</div>
+                    </div>
+                    {% endif %}
+                    
+                </div>
+                {% if air_quality.pollutants %}
+                <div class="pollutants-grid">
+                    {% if air_quality.pollutants.co != None %}
+                    <div class="pollutant-item">
+                        <p>Carbon Monoxide</p>
+                        <h4>{{ air_quality.pollutants.co }} μg/m³</h4>
+                    </div>
+                    {% endif %}
+                        {% if air_quality.pollutants.no != None %}
+                    <div class="pollutant-item">
+                        <p>Nitrogen Monoxide</p>
+                        <h4>{{ air_quality.pollutants.no }} μg/m³</h4>
+                    </div>
+                    {% endif %}
+                        {% if air_quality.pollutants.no2 != None %}
+                    <div class="pollutant-item">
+                        <p>Nitrogen Dioxide</p>
+                        <h4>{{ air_quality.pollutants.no2 }} μg/m³</h4>
+                    </div>
+                    {% endif %}
+                        {% if air_quality.pollutants.o3 != None %}
+                    <div class="pollutant-item">
+                        <p>Ozone</p>
+                        <h4>{{ air_quality.pollutants.o3 }} μg/m³</h4>
+                    </div>
+                    {% endif %}
+                        {% if air_quality.pollutants.so2 != None %}
+                    <div class="pollutant-item">
+                        <p>Sulfur Dioxide</p>
+                        <h4>{{ air_quality.pollutants.so2 }} μg/m³</h4>
+                    </div>
+                    {% endif %}
+                        {% if air_quality.pollutants.nh3 != None %}
+                    <div class="pollutant-item">
+                        <p>Ammonia</p>
+                        <h4>{{ air_quality.pollutants.nh3 }} μg/m³</h4>
+                    </div>
+                    {% endif %}
+                        {% if air_quality.pollutants.pm25 != None %}
+                    <div class="pollutant-item">
+                        <p>PM2.5</p>
+                        <h4>{{ air_quality.pollutants.pm25 }} μg/m³</h4>
+                    </div>
+                    {% endif %}
+                        {% if air_quality.pollutants.pm10 != None %}
+                    <div class="pollutant-item">
+                        <p>PM10</p>
+                        <h4>{{ air_quality.pollutants.pm10 }} μg/m³</h4>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                <div class="aqi-recommendation">
+                    {% if air_quality.aqi <= 50 %}
+                        ✅ <strong>Good Air Quality</strong> - Air quality is satisfactory. Enjoy outdoor activities!
+                    {% elif air_quality.aqi <= 100 %}
+                        ⚠️ <strong>Moderate Air Quality</strong> - Acceptable for most people. Sensitive individuals may experience minor breathing issues.
+                    {% elif air_quality.aqi <= 150 %}
+                        🚨 <strong>Unhealthy for Sensitive Groups</strong> - Sensitive groups should reduce outdoor activities. Others should limit prolonged exposure.
+                    {% elif air_quality.aqi <= 200 %}
+                        ⛔ <strong>Unhealthy</strong> - Everyone should avoid prolonged outdoor activities. Sensitive groups should stay indoors.
+                    {% elif air_quality.aqi <= 300 %}
+                        🚨🚨 <strong>Very Unhealthy</strong> - Health alert: Everyone may experience serious health effects. Avoid all outdoor activities.
+                    {% else %}
+                        ⛔⛔ <strong>Hazardous</strong> - Health warning: Emergency conditions. Everyone should stay indoors and avoid physical activity.
+                    {% endif %}
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- Forecast Section - Modern Design -->
+            {% if forecast %}
+            <section class="forecast-section">
+                <h2 class="section-header">
+                    <i class="fas fa-calendar-alt"></i> 5-Day Forecast
+                </h2>
+                <div class="forecast-days" id="forecastDays">
+                    <!-- Days will be grouped by JavaScript -->
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- Weather Maps Section -->
+            {% if weather_maps %}
+            <section class="weather-maps-section">
+                <h2 class="section-header">
+                    <i class="fas fa-map"></i> Weather Maps
+                </h2>
+                <div class="map-controls">
+                    <button class="map-layer-btn active" onclick="changeMapLayer('clouds')">Clouds</button>
+                    <button class="map-layer-btn" onclick="changeMapLayer('precipitation')">Precipitation</button>
+                    <button class="map-layer-btn" onclick="changeMapLayer('pressure')">Pressure</button>
+                    <button class="map-layer-btn" onclick="changeMapLayer('wind')">Wind</button>
+                    <button class="map-layer-btn" onclick="changeMapLayer('temp')">Temperature</button>
+                </div>
+                <div id="weather-map"></div>
+                <div class="map-legend" id="map-legend">
+                    Showing: Clouds layer
+                </div>
+            </section>
+            {% endif %}
+
+        {% elif city %}
+            <section class="hero-section">
+                <p class="error-message">Location not available. Please try another city.</p>
+            </section>
+        {% else %}
+            <section class="hero-section">
+                <p class="error-message">Enter a city name to get weather information</p>
+            </section>
+        {% endif %}
+
+        <!-- Accessibility Controls -->
+        <div class="accessibility-controls">
+            <button id="speakWeather" class="control-button voice-button">
+                <i class="fas fa-volume-up"></i> Read Weather
+            </button>
+            <button id="toggleLightMode" class="control-button light-mode-button">
+                <i class="fas fa-sun"></i> Light Mode
+            </button>
+            <!-- Font controls removed per request -->
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <button onclick="scrollToTop()" class="back-to-top">
+                <i class="fas fa-arrow-up"></i> Back to Top
+            </button>
+            <div class="footer-links">
+                <a href="/docs/" target="_blank" rel="noopener">Documentation</a>
+                <a href="/privacy/" target="_blank" rel="noopener">Privacy Policy</a>
+                <a href="/terms/" target="_blank" rel="noopener">Terms of Service</a>
+                <a href="/contact/" target="_blank" rel="noopener">Contact Us</a>
+            </div>
+            <div class="social-links">
+                <a href="https://x.com/Nandakishor02?t=m6bvkeIsn2sPfw43pFj2AQ&s=09" target="_blank">
+                    <i class="fab fa-twitter"></i>
+                </a>
+                <a href="#" target="_blank">
+                    <i class="fab fa-facebook"></i>
+                </a>
+                <a href="https://www.instagram.com/nandakishor_nair_0109?igsh=a29hamNteGVoaGFk" target="_blank">
+                    <i class="fab fa-instagram"></i>
+                </a>
+                <a href="https://github.com/NandakishorNaiR" target="_blank">
+                    <i class="fab fa-github"></i>
+                </a>
+            </div>
+            <p>KnoxyView © 2025 Knoxy Nexus. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Leaflet.js JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Theme Toggle (Light / Dark) - robust button/icon handling and persistence
+        const lightModeButton = document.getElementById('toggleLightMode');
+
+        function setTheme(isLight) {
+            if (isLight) {
+                document.body.classList.add('light-mode');
+                localStorage.setItem('themeMode', 'light');
+                lightModeButton.innerHTML = '<i class="fas fa-moon"></i> Dark Mode';
+            } else {
+                document.body.classList.remove('light-mode');
+                localStorage.setItem('themeMode', 'dark');
+                lightModeButton.innerHTML = '<i class="fas fa-sun"></i> Light Mode';
+            }
+        }
+
+        // Initialize from saved preference
+        try {
+            const savedMode = localStorage.getItem('themeMode');
+            if (savedMode === 'light') {
+                setTheme(true);
+            } else {
+                setTheme(false);
+            }
+        } catch (e) {
+            // localStorage may be unavailable in some contexts; default to dark (no class)
+            setTheme(false);
+        }
+
+        // Toggle on click
+        lightModeButton.addEventListener('click', () => {
+            const isLight = !document.body.classList.contains('light-mode');
+            setTheme(isLight);
+        });
+
+        // Geolocation Script
+        document.getElementById('getLocation').addEventListener('click', () => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        const { latitude, longitude } = position.coords;
+                        window.location.href = `/weather/?lat=${latitude}&lon=${longitude}`;
+                    },
+                    error => alert(`Error: ${error.message}`)
+                );
+            } else {
+                alert("Geolocation is not supported by your browser.");
+            }
+        });
+
+        // Voice Assistant Script
+        document.getElementById('speakWeather').addEventListener('click', () => {
+            let weatherText = `The current temperature is {{ current_weather.temperature|default:"not available" }} degrees Celsius. 
+                            It feels like {{ current_weather.real_feel|default:"not available" }} degrees. 
+                            Humidity is {{ current_weather.humidity|default:"not available" }} percent. 
+                            Wind direction is {{ current_weather.wind_direction|default:"not available" }}. 
+                            Pressure is {{ current_weather.pressure|default:"not available" }} hPa.`;
+            
+            if ('{{ uv_index.value|default:"" }}') {
+                weatherText += ` UV Index is {{ uv_index.value }} with {{ uv_index.risk_level }} risk.`;
+            }
+            
+            if ('{{ air_quality.aqi|default:"" }}') {
+                weatherText += ` Air Quality Index is {{ air_quality.aqi }}.`;
+            }
+
+            let speech = new SpeechSynthesisUtterance(weatherText);
+            speech.lang = "en-US"; 
+            speech.rate = 1;
+            window.speechSynthesis.speak(speech);
+        });
+
+        // Font controls removed
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Group Forecast by Day and Create Modern Timeline
+        {% if forecast %}
+        function groupForecastByDay() {
+            const forecast = [
+                {% for item in forecast %}
+                {
+                    date: "{{ item.date|escapejs }}",
+                    time: "{{ item.time|escapejs }}",
+                    temp: {{ item.temp }},
+                    description: "{{ item.description|escapejs }}",
+                    icon: "{{ item.icon|escapejs }}",
+                    wind_speed: {{ item.wind_speed }},
+                    wind_direction: "{{ item.wind_direction|default:"N/A"|escapejs }}",
+                    humidity: {{ item.humidity }},
+                    pressure: {{ item.pressure }},
+                    clouds: {{ item.clouds }},
+                    rain_chance: {{ item.rain_chance }},
+                    visibility: {{ item.visibility|default:0 }}
+                }{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ];
+
+            // Group by date
+            const grouped = {};
+            forecast.forEach(item => {
+                const dateKey = item.date;
+                if (!grouped[dateKey]) {
+                    grouped[dateKey] = [];
+                }
+                grouped[dateKey].push(item);
+            });
+
+            // Create HTML for each day
+            const container = document.getElementById('forecastDays');
+            if (!container) {
+                console.error('Forecast container not found');
+                return;
+            }
+            container.innerHTML = ''; // Clear any existing content
+            let isFirst = true;
+            
+            Object.keys(grouped).forEach(dateKey => {
+                const dayItems = grouped[dateKey];
+                const temps = dayItems.map(item => item.temp);
+                const maxTemp = Math.max(...temps);
+                const minTemp = Math.min(...temps);
+                const avgRain = Math.round(dayItems.reduce((sum, item) => sum + item.rain_chance, 0) / dayItems.length);
+                const firstIcon = dayItems[0].icon;
+                
+                const dayHTML = `
+                    <div class="forecast-day ${isFirst ? 'active' : ''}">
+                        <div class="forecast-day-header ${isFirst ? 'active' : ''}" onclick="toggleDay(this)">
+                            <div class="day-info">
+                                <div>
+                                    <div class="day-name">${dateKey.split(',')[0]}</div>
+                                    <div class="day-date">${dateKey.split(',')[1]}</div>
+                                </div>
+                                <img src="https://openweathermap.org/img/wn/${firstIcon}@2x.png" alt="Weather" class="day-icon">
+                            </div>
+                            <div class="day-summary">
+                                <div class="day-temp-range">
+                                    <span class="day-temp-high">${maxTemp}°</span>
+                                    <span class="day-temp-low">${minTemp}°</span>
+                                </div>
+                                ${avgRain > 0 ? `
+                                <div class="day-rain-indicator">
+                                    <i class="fas fa-cloud-rain day-rain-icon"></i>
+                                    <span>${avgRain}%</span>
+                                </div>
+                                ` : ''}
+                                <i class="fas fa-chevron-down day-toggle"></i>
+                            </div>
+                        </div>
+                        <div class="forecast-timeline ${isFirst ? '' : 'hidden'}" style="display: ${isFirst ? 'block' : 'none'};">
+                            <div class="timeline-container">
+                                ${dayItems.map(item => `
+                                    <div class="forecast-hour-card" onclick="toggleHourCard(this)">
+                                        <div class="hour-time">${item.time}</div>
+                                        <img src="https://openweathermap.org/img/wn/${item.icon}@2x.png" alt="Weather" class="hour-icon">
+                                        <div class="hour-temp">${item.temp}°C</div>
+                                        <div class="hour-desc">${item.description}</div>
+                                        <div class="hour-quick-info">
+                                            <div class="hour-quick-item">
+                                                <i class="fas fa-tint"></i>
+                                                <span>${item.humidity}%</span>
+                                            </div>
+                                            <div class="hour-quick-item">
+                                                <i class="fas fa-wind"></i>
+                                                <span>${item.wind_speed} m/s</span>
+                                            </div>
+                                            ${item.rain_chance > 0 ? `
+                                            <div class="hour-quick-item">
+                                                <i class="fas fa-cloud-rain"></i>
+                                                <span class="rain-chance ${item.rain_chance <= 30 ? 'low' : item.rain_chance <= 70 ? 'moderate' : 'high'}">${item.rain_chance}%</span>
+                                            </div>
+                                            ` : ''}
+                                        </div>
+                                        <div class="hour-details">
+                                            <div class="hour-detail-item">
+                                                <strong>Wind Direction</strong>
+                                                ${item.wind_direction}
+                                            </div>
+                                            <div class="hour-detail-item">
+                                                <strong>Pressure</strong>
+                                                ${item.pressure} hPa
+                                            </div>
+                                            <div class="hour-detail-item">
+                                                <strong>Clouds</strong>
+                                                ${item.clouds}%
+                                            </div>
+                                            <div class="hour-detail-item">
+                                                <strong>Visibility</strong>
+                                                ${item.visibility || 'N/A'} km
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += dayHTML;
+                isFirst = false;
+            });
+        }
+
+        function toggleDay(header) {
+            const day = header.closest('.forecast-day');
+            const timeline = day.querySelector('.forecast-timeline');
+            const isActive = day.classList.contains('active');
+            
+            // Close all days
+            document.querySelectorAll('.forecast-day').forEach(d => {
+                d.classList.remove('active');
+                d.querySelector('.forecast-day-header').classList.remove('active');
+                d.querySelector('.forecast-timeline').style.display = 'none';
+            });
+            
+            // Open clicked day if it wasn't active
+            if (!isActive) {
+                day.classList.add('active');
+                header.classList.add('active');
+                timeline.style.display = 'block';
+            }
+        }
+
+        function toggleHourCard(card) {
+            card.classList.toggle('expanded');
+        }
+
+        // Initialize forecast on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof groupForecastByDay === 'function') {
+                groupForecastByDay();
+            }
+        });
+        {% endif %}
+        
+        // Make sure forecast function is available even if forecast data exists
+        {% if forecast %}
+        // Function is already defined above
+        {% else %}
+        // No forecast data available
+        function groupForecastByDay() {
+            const container = document.getElementById('forecastDays');
+            if (container) {
+                container.innerHTML = '<p style="text-align: center; padding: 40px; color: #94a3b8;">No forecast data available</p>';
+            }
+        }
+        {% endif %}
+
+        // Weather Map Initialization
+        {% if weather_maps %}
+        let map;
+        let currentLayer = null;
+        const apiKey = '{{ weather_maps.api_key }}';
+        const lat = {{ weather_maps.lat }};
+        const lon = {{ weather_maps.lon }};
+
+        // Initialize map
+        map = L.map('weather-map').setView([lat, lon], 6);
+
+        // Add OpenStreetMap base layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Add marker for location
+        L.marker([lat, lon]).addTo(map)
+            .bindPopup('{{ city|title|default:"Location" }}')
+            .openPopup();
+
+        // Map layer URLs
+        const layerUrls = {
+            clouds: `https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=${apiKey}`,
+            precipitation: `https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${apiKey}`,
+            pressure: `https://tile.openweathermap.org/map/pressure_new/{z}/{x}/{y}.png?appid=${apiKey}`,
+            wind: `https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${apiKey}`,
+            temp: `https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${apiKey}`
+        };
+
+        const layerNames = {
+            clouds: 'Clouds',
+            precipitation: 'Precipitation',
+            pressure: 'Pressure',
+            wind: 'Wind',
+            temp: 'Temperature'
+        };
+
+        // Change map layer
+        function changeMapLayer(layerType) {
+            // Remove current layer
+            if (currentLayer) {
+                map.removeLayer(currentLayer);
+            }
+
+            // Add new layer
+            currentLayer = L.tileLayer(layerUrls[layerType], {
+                attribution: '© OpenWeatherMap',
+                opacity: 0.7
+            });
+            currentLayer.addTo(map);
+
+            // Update active button
+            document.querySelectorAll('.map-layer-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Update legend
+            document.getElementById('map-legend').textContent = `Showing: ${layerNames[layerType]} layer`;
+        }
+
+        // Initialize with clouds layer
+        currentLayer = L.tileLayer(layerUrls.clouds, {
+            attribution: '© OpenWeatherMap',
+            opacity: 0.7
+        });
+        currentLayer.addTo(map);
+        {% endif %}
+    </script>
+</body>
+</html>
