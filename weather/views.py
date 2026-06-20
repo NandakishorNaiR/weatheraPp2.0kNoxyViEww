@@ -1,498 +1,208 @@
 import logging
-import requests
 import os
-from datetime import datetime, timedelta
-
-
 from django.shortcuts import render, redirect
 from django.views import View
 from django.conf import settings
+from django.http import HttpResponse, HttpRequest, JsonResponse
+from typing import Union, Any, Dict
 
 from .models import Weather
+from weather.services.weather_service import get_weather_dashboard_data, WeatherServiceError
 
 logger = logging.getLogger(__name__)
 
 
-# ------------------ AQI (US EPA) Utilities ------------------
-PM25_BREAKPOINTS = [
-    (0.0, 12.0, 0, 50),
-    (12.1, 35.4, 51, 100),
-    (35.5, 55.4, 101, 150),
-    (55.5, 150.4, 151, 200),
-    (150.5, 250.4, 201, 300),
-    (250.5, 350.4, 301, 400),
-    (350.5, 500.4, 401, 500),
-]
-
-PM10_BREAKPOINTS = [
-    (0, 54, 0, 50),
-    (55, 154, 51, 100),
-    (155, 254, 101, 150),
-    (255, 354, 151, 200),
-    (355, 424, 201, 300),
-    (425, 504, 301, 400),
-    (505, 604, 401, 500),
-]
-
-
-def calculate_aqi(concentration, breakpoints):
-    try:
-        concentration = float(concentration)
-    except Exception:
-        return None
-
-    for bp_low, bp_high, aqi_low, aqi_high in breakpoints:
-        if bp_low <= concentration <= bp_high:
-            return round(((aqi_high - aqi_low) / (bp_high - bp_low)) * (concentration - bp_low) + aqi_low)
-    return None
-
-
-def pm25_to_aqi(pm25):
-    return calculate_aqi(pm25, PM25_BREAKPOINTS)
-
-
-def pm10_to_aqi(pm10):
-    return calculate_aqi(pm10, PM10_BREAKPOINTS)
-
-
-def get_final_aqi(pm25=None, pm10=None):
-    aqi_values = []
-    if pm25 is not None:
-        a = pm25_to_aqi(pm25)
-        if a is not None:
-            aqi_values.append(a)
-    if pm10 is not None:
-        a = pm10_to_aqi(pm10)
-        if a is not None:
-            aqi_values.append(a)
-    if not aqi_values:
-        return None
-    return min(max(aqi_values), 500)
-
-
-def get_aqi_category(aqi):
-    if aqi is None:
-        return ("Unknown", "AQI unavailable")
-    try:
-        aqi = float(aqi)
-    except Exception:
-        return ("Unknown", "AQI unavailable")
-
-    if aqi <= 50:
-        return ("Good", "Air quality is satisfactory.")
-    elif aqi <= 100:
-        return ("Moderate", "Air quality is acceptable.")
-    elif aqi <= 150:
-        return ("Unhealthy for Sensitive Groups", "Sensitive groups should limit outdoor activity.")
-    elif aqi <= 200:
-        return ("Unhealthy", "Everyone may experience health effects.")
-    elif aqi <= 300:
-        return ("Very Unhealthy", "Health alert: everyone may experience serious effects.")
-    else:
-        return ("Hazardous", "Emergency conditions. Avoid outdoor activity.")
-
-
-
-
-
-
 class HomeView(View):
-    """
-    Displays the home page.
-    """
-    def get(self, request):
+    """Displays the home page landing state."""
+    def get(self, request: HttpRequest) -> HttpResponse:
         city = request.GET.get("city")
         if city:
+            react_index = os.path.join(settings.BASE_DIR, 'frontend', 'dist', 'index.html')
+            if os.path.exists(react_index):
+                return redirect(f"/?city={city}")
             return redirect(f"/weather/?city={city}")
+            
+        react_index = os.path.join(settings.BASE_DIR, 'frontend', 'dist', 'index.html')
+        if os.path.exists(react_index):
+            return render(request, 'index.html')
         return render(request, "weather/index.html")
 
 
-class FetchWeatherView(View):
-    """
-    Fetches weather data using GPS (lat/lon) or city name.
-    GPS is ALWAYS preferred to avoid server-location issues.
-    """
+class FetchWeatherAPIView(View):
+    """API endpoint returning consolidated weather and CPCB AQI data."""
 
-    def get(self, request):
+    def get(self, request: HttpRequest) -> JsonResponse:
         city = request.GET.get("city")
         lat = request.GET.get("lat")
         lon = request.GET.get("lon")
 
-        weather_api_key = os.getenv("OPENWEATHER_API_KEY")
-        aqi_api_key = os.getenv("WAQI_API_KEY")
+        weather_api_key = os.getenv("OPENWEATHER_API_KEY", "")
+        aqi_api_key = os.getenv("WAQI_API_KEY", "")
 
-        if not weather_api_key or not aqi_api_key:
-            logger.error("API keys missing")
-            return render(request, "weather/index.html", {"error": "Server configuration error"})
-
-        context = self.initialize_context(city)
-
-        # 🔥 GPS FIRST (CRITICAL FIX)
+        float_lat = None
+        float_lon = None
         if lat and lon:
-            city = self.reverse_geocode(lat, lon, weather_api_key)
-            context["city"] = city
-
-        # Fallback: city → lat/lon
-        elif city:
-            lat, lon = self.get_coordinates(city, weather_api_key, context)
-
-        else:
-            context["error"] = "Location not provided"
-            return render(request, "weather/index.html", context)
-
-        if lat and lon:
-            self.fetch_weather_data(lat, lon, weather_api_key, context)
-            # UV index (best-effort)
             try:
-                self.fetch_uv_index(lat, lon, weather_api_key, context)
-            except Exception:
-                pass
-            self.fetch_forecast_data(lat, lon, weather_api_key, context)
+                float_lat = float(lat)
+                float_lon = float(lon)
+            except ValueError:
+                response = JsonResponse({"error": "Invalid lat/lon coordinate parameters."}, status=400)
+                response["Access-Control-Allow-Origin"] = "*"
+                return response
 
-            # Fetch air quality from WAQI (primary source)
-            self.fetch_air_quality_data(lat, lon, aqi_api_key, context)
+        try:
+            dashboard_data = get_weather_dashboard_data(
+                city=city,
+                lat=float_lat,
+                lon=float_lon,
+                weather_api_key=weather_api_key,
+                aqi_api_key=aqi_api_key
+            )
+            if dashboard_data.get("current_weather") and dashboard_data.get("city"):
+                FetchWeatherView.store_weather_data(dashboard_data["city"], dashboard_data["current_weather"])
+            
+            response = JsonResponse(dashboard_data)
+        except WeatherServiceError as e:
+            response = JsonResponse({"error": str(e)}, status=400)
+        except Exception as e:
+            logger.error(f"Unexpected API exception: {e}")
+            response = JsonResponse({"error": "An unexpected error occurred while loading weather data."}, status=500)
+        
+        response["Access-Control-Allow-Origin"] = "*"
+        response["Access-Control-Allow-Headers"] = "*"
+        return response
 
-            context["weather_maps"] = {
-                "lat": lat,
-                "lon": lon,
-                "api_key": weather_api_key,
-            }
 
-            if context.get("current_weather") and city:
-                self.store_weather_data(city, context["current_weather"])
+class FetchWeatherView(View):
+    """
+    Fetches consolidated weather and CPCB air quality details using coordinates or city name.
+    Utilizes 15-minute LocMem caching in weather_service.
+    """
 
-        return render(request, "weather/index.html", context)
+    def get(self, request: HttpRequest) -> HttpResponse:
+        city = request.GET.get("city")
+        lat = request.GET.get("lat")
+        lon = request.GET.get("lon")
 
-    # ------------------ Helpers ------------------
+        react_index = os.path.join(settings.BASE_DIR, 'frontend', 'dist', 'index.html')
+        if os.path.exists(react_index):
+            params = []
+            if city:
+                params.append(f"city={city}")
+            if lat and lon:
+                params.append(f"lat={lat}&lon={lon}")
+            query_str = "?" + "&".join(params) if params else ""
+            return redirect(f"/{query_str}")
 
-    @staticmethod
-    def initialize_context(city):
-        now = datetime.now()
-        return {
+        weather_api_key = os.getenv("OPENWEATHER_API_KEY", "")
+        aqi_api_key = os.getenv("WAQI_API_KEY", "")
+
+        # 1. Initialize view context
+        context: Dict[str, Any] = {
             "city": city,
             "current_weather": None,
             "forecast": [],
             "air_quality": None,
             "error": None,
-            "date": now.strftime("%B %d, %Y"),
-            "day": now.strftime("%A"),
         }
 
-    def get_coordinates(self, city, api_key, context):
-        url = "http://api.openweathermap.org/geo/1.0/direct"
-        params = {"q": city, "limit": 1, "appid": api_key}
+        # 2. Convert string coordinates if present
+        float_lat = None
+        float_lon = None
+        if lat and lon:
+            try:
+                float_lat = float(lat)
+                float_lon = float(lon)
+            except ValueError:
+                context["error"] = "Invalid lat/lon coordinate parameters."
+                return render(request, "weather/index.html", context)
+
+        # 3. Call weather service to fetch cached/fresh report
         try:
-            res = requests.get(url, params=params)
-            res.raise_for_status()
-            data = res.json()
-            if data:
-                return data[0]["lat"], data[0]["lon"]
-            context["error"] = "City not found"
-        except Exception as e:
-            logger.error(f"Geocoding error: {e}")
-            context["error"] = "Failed to fetch coordinates"
-        return None, None
-
-    def reverse_geocode(self, lat, lon, api_key):
-        url = "http://api.openweathermap.org/geo/1.0/reverse"
-        params = {"lat": lat, "lon": lon, "limit": 1, "appid": api_key}
-        try:
-            res = requests.get(url, params=params)
-            res.raise_for_status()
-            data = res.json()
-            return data[0]["name"] if data else "Unknown"
-        except Exception as e:
-            logger.error(f"Reverse geocode error: {e}")
-            return "Unknown"
-
-    def fetch_weather_data(self, lat, lon, api_key, context):
-        try:
-            url = "http://api.openweathermap.org/data/2.5/weather"
-            params = {
-                "lat": lat,
-                "lon": lon,
-                "appid": api_key,
-                "units": "metric",
-            }
-            res = requests.get(url, params=params)
-            res.raise_for_status()
-            data = res.json()
-
-            wind = data.get("wind", {})
-            visibility_m = data.get("visibility", 0)
-
-            context["current_weather"] = {
-                "temperature": round(data["main"]["temp"]),
-                "real_feel": round(data["main"]["feels_like"]),
-                "description": data["weather"][0]["description"].title(),
-                "weather_main": data["weather"][0]["main"],
-                "icon": data["weather"][0]["icon"],
-                "humidity": data["main"]["humidity"],
-                "pressure": data["main"]["pressure"],
-                "wind_speed": round(wind.get("speed", 0), 1),
-                "wind_gust": (round(wind.get("gust"), 1) if wind.get("gust") is not None else None),
-                "wind_direction": self.get_wind_direction(wind.get("deg")),
-                "visibility": round(visibility_m / 1000, 1),
-                "clouds": data.get("clouds", {}).get("all", 0),
-                "sunrise": self.get_local_time(data["sys"]["sunrise"], data["timezone"]),
-                "sunset": self.get_local_time(data["sys"]["sunset"], data["timezone"]),
-                "is_daytime": self.is_daytime(data["timezone"]),
-                "country": data["sys"].get("country", ""),
-                "badge": self.map_weather_to_badge(
-                    data["weather"][0]["main"],
-                    data["weather"][0]["description"],
-                    self.is_daytime(data["timezone"]),
-                ),
-            }
-        except Exception as e:
-            logger.error(f"Weather fetch error: {e}")
-            context["error"] = "Failed to fetch weather data"
-
-    def fetch_uv_index(self, lat, lon, api_key, context):
-        """Fetch UV index using OpenWeather One Call API and map to risk levels."""
-        try:
-            url = "https://api.openweathermap.org/data/2.5/onecall"
-            params = {
-                "lat": lat,
-                "lon": lon,
-                "exclude": "minutely,hourly,daily,alerts",
-                "appid": api_key,
-            }
-            res = requests.get(url, params=params)
-            res.raise_for_status()
-            data = res.json()
-
-            uvi = data.get("current", {}).get("uvi")
-            if uvi is None:
-                return
-
-            # classify risk
-            if uvi <= 2:
-                risk = ("Low", "green")
-            elif uvi <= 5:
-                risk = ("Moderate", "yellow")
-            elif uvi <= 7:
-                risk = ("High", "orange")
-            elif uvi <= 10:
-                risk = ("Very High", "red")
-            else:
-                risk = ("Extreme", "purple")
-
-            context["uv_index"] = {
-                "value": round(uvi, 1),
-                "risk_level": risk[0],
-                "risk_color": risk[1],
-            }
-        except Exception as e:
-            logger.debug(f"UV fetch error: {e}")
-
-    def fetch_forecast_data(self, lat, lon, api_key, context):
-        try:
-            url = "http://api.openweathermap.org/data/2.5/forecast"
-            params = {
-                "lat": lat,
-                "lon": lon,
-                "appid": api_key,
-                "units": "metric",
-            }
-            res = requests.get(url, params=params)
-            res.raise_for_status()
-            data = res.json()
-
-            context["forecast"] = [
-                {
-                    "date": datetime.strptime(item["dt_txt"], "%Y-%m-%d %H:%M:%S")
-                    .strftime("%A, %b %d"),
-                    "time": datetime.strptime(item["dt_txt"], "%Y-%m-%d %H:%M:%S")
-                    .strftime("%I:%M %p"),
-                    "temp": round(item["main"]["temp"]),
-                    "description": item["weather"][0]["description"].title(),
-                    "icon": item["weather"][0]["icon"],
-                    "humidity": item["main"]["humidity"],
-                    "pressure": item["main"]["pressure"],
-                    "wind_speed": round(item.get("wind", {}).get("speed", 0), 1),
-                    "wind_direction": self.get_wind_direction(
-                        item.get("wind", {}).get("deg")
-                    ),
-                    "clouds": item.get("clouds", {}).get("all", 0),
-                    "rain_chance": round(item.get("pop", 0) * 100),
-                }
-                for item in data.get("list", [])
-            ]
-        except Exception as e:
-            logger.error(f"Forecast error: {e}")
-            context["error"] = "Failed to fetch forecast"
-
-    def fetch_air_quality_data(self, lat, lon, api_key, context):
-        try:
-            url = f"https://api.waqi.info/feed/geo:{lat};{lon}/"
-            res = requests.get(url, params={"token": api_key})
-            res.raise_for_status()
-            data = res.json()
-            # WAQI response processing
-            if data.get("status") == "ok":
-                iaqi = data["data"].get("iaqi", {})
-
-                # Helper: robust pollutant extraction (handles common key variants)
-                def extract_pollutant(d, keys):
-                    for k in keys:
-                        if k in d:
-                            try:
-                                return float(d[k].get("v"))
-                            except Exception:
-                                return None
-                    return None
-
-                pm25 = extract_pollutant(iaqi, ["pm25", "pm2_5", "pm2.5"])
-                pm10 = extract_pollutant(iaqi, ["pm10"])
-
-                # Compute AQI using EPA conversion if possible
-                final_aqi = get_final_aqi(pm25=pm25, pm10=pm10)
-
-                # Debug/logging: capture provider AQI and iaqi keys when conversion fails
-                provider_aqi = data["data"].get("aqi")
-                logger.debug(f"WAQI provider_aqi={provider_aqi} iaqi_keys={list(iaqi.keys())} pm25={pm25} pm10={pm10} computed_aqi={final_aqi}")
-
-                # WAQI uses 999 as a placeholder for unavailable — treat as missing
-                try:
-                    if provider_aqi is not None and int(provider_aqi) == 999:
-                        provider_aqi = None
-                except Exception:
-                    pass
-
-                if final_aqi is None:
-                    final_aqi = provider_aqi
-
-                category, message = get_aqi_category(final_aqi)
-
-                # Add an explanatory note when AQI couldn't be computed
-                note = None
-                if final_aqi is None:
-                    note = "Pollutant concentration data missing; AQI unavailable"
-
-                context["air_quality"] = {
-                    "aqi": final_aqi,
-                    "category": category,
-                    "message": message,
-                    "note": note,
-                    "pollutants": {k: v["v"] for k, v in iaqi.items()},
-                }
-            else:
-                context["error"] = "AQI data unavailable"
+            dashboard_data = get_weather_dashboard_data(
+                city=city,
+                lat=float_lat,
+                lon=float_lon,
+                weather_api_key=weather_api_key,
+                aqi_api_key=aqi_api_key
+            )
             
-        except Exception as e:
-            logger.error(f"AQI error: {e}")
-            context["error"] = "Failed to fetch air quality"
+            # Map dashboard data to template context
+            context.update(dashboard_data)
 
-    def store_weather_data(self, city, weather_data):
+            # Store search query persistently in local DB for statistics
+            if context.get("current_weather") and context.get("city"):
+                self.store_weather_data(context["city"], context["current_weather"])
+
+        except WeatherServiceError as e:
+            logger.error(f"WeatherService error: {e}")
+            context["error"] = str(e)
+        except Exception as e:
+            logger.error(f"Unexpected view controller exception: {e}")
+            context["error"] = "An unexpected error occurred while loading weather data."
+
+        return render(request, "weather/index.html", context)
+
+    @staticmethod
+    def store_weather_data(city: str, weather_data: Dict[str, Any]) -> None:
+        """Stores search weather record persistently in local DB."""
         try:
             Weather.objects.create(
                 city=city,
                 temperature=weather_data["temperature"],
                 description=weather_data["description"],
-                humidity=weather_data["humidity"],
-                pressure=weather_data["pressure"],
-                real_feel=weather_data["real_feel"],
-                wind_direction=weather_data["wind_direction"],
-                sunrise=weather_data["sunrise"],
-                is_daytime=weather_data["is_daytime"],
+                humidity=weather_data.get("humidity"),
+                pressure=weather_data.get("pressure"),
+                real_feel=weather_data.get("real_feel"),
+                wind_direction=weather_data.get("wind_direction"),
+                sunrise=weather_data.get("sunrise"),
+                is_daytime=weather_data.get("is_daytime", True),
             )
         except Exception as e:
-            logger.error(f"DB save error: {e}")
-
-    
-
-    # ------------------ Utilities ------------------
-
-    @staticmethod
-    def map_weather_to_badge(weather_main, description, is_daytime):
-        """Return a simple badge dict with icon, label and color for UI display.
-
-        Uses FontAwesome icon names (prefixed with 'fa-') which the template
-        already loads. Colors are simple hex values used inline for now.
-        """
-        desc = (description or "").lower()
-        main = (weather_main or "").lower()
-
-        # Default
-        icon = "fa-sun"
-        label = description or (weather_main or "Unknown")
-        color = "#f59e0b" if is_daytime else "#94a3b8"
-        btype = "default"
-
-        if "clear" in main:
-            icon = "fa-sun" if is_daytime else "fa-moon"
-            label = "Clear"
-            color = "#ffd166" if is_daytime else "#93c5fd"
-            btype = "clear"
-        elif "cloud" in main:
-            icon = "fa-cloud-sun" if is_daytime else "fa-cloud-moon"
-            label = "Cloudy"
-            color = "#cbd5e1"
-            btype = "cloudy"
-        elif "rain" in desc or "drizzle" in desc:
-            icon = "fa-cloud-showers-heavy"
-            label = "Rain"
-            color = "#3b82f6"
-            btype = "rain"
-        elif "snow" in desc:
-            icon = "fa-snowflake"
-            label = "Snow"
-            color = "#7dd3fc"
-            btype = "snow"
-        elif "thunder" in desc or "storm" in desc:
-            icon = "fa-bolt"
-            label = "Thunderstorm"
-            color = "#f97316"
-            btype = "thunder"
-        elif "haze" in desc or "smoke" in desc or "fog" in desc or "mist" in desc:
-            icon = "fa-smog"
-            label = "Hazy"
-            color = "#94a3b8"
-            btype = "hazy"
-        elif "wind" in main or "breeze" in desc:
-            icon = "fa-wind"
-            label = "Windy"
-            color = "#60a5fa"
-            btype = "windy"
-
-        return {"icon": icon, "label": label, "color": color, "type": btype}
-
-    @staticmethod
-    def get_wind_direction(degree):
-        if degree is None:
-            return "N/A"
-        directions = [
-            "North", "NorthEast", "East", "SouthEast",
-            "South", "SouthWest", "West", "NorthWest"
-        ]
-        return directions[int((degree / 45) + 0.5) % 8]
-
-    @staticmethod
-    def get_local_time(timestamp, offset):
-        return (datetime.utcfromtimestamp(timestamp + offset)).strftime("%I:%M %p")
-
-    @staticmethod
-    def is_daytime(offset):
-        local_hour = (datetime.utcnow() + timedelta(seconds=offset)).hour
-        return 6 <= local_hour < 18
+            logger.error(f"Failed to persist weather search into DB: {e}")
 
 
-def documentation_view(request):
+def service_worker(request: HttpRequest) -> HttpResponse:
+    """Serves the PWA Service Worker script from the root scope."""
+    try:
+        sw_path = os.path.join(settings.BASE_DIR, 'frontend', 'dist', 'sw.js')
+        if not os.path.exists(sw_path):
+            sw_path = os.path.join(settings.BASE_DIR, 'weather', 'static', 'weather', 'js', 'sw.js')
+        with open(sw_path, 'r', encoding='utf-8') as f:
+            return HttpResponse(f.read(), content_type='application/javascript')
+    except Exception as e:
+        logger.error(f"Failed to load sw.js: {e}")
+        return HttpResponse("// sw.js load error", content_type='application/javascript', status=404)
+
+
+def web_manifest(request: HttpRequest) -> HttpResponse:
+    """Serves the PWA Web Manifest details from the root scope."""
+    try:
+        manifest_path = os.path.join(settings.BASE_DIR, 'frontend', 'dist', 'manifest.json')
+        if not os.path.exists(manifest_path):
+            manifest_path = os.path.join(settings.BASE_DIR, 'weather', 'static', 'weather', 'manifest.json')
+        with open(manifest_path, 'r', encoding='utf-8') as f:
+            return HttpResponse(f.read(), content_type='application/json')
+    except Exception as e:
+        logger.error(f"Failed to load manifest.json: {e}")
+        return HttpResponse("{}", content_type='application/json', status=404)
+
+
+def documentation_view(request: HttpRequest) -> HttpResponse:
     """Render the project documentation HTML page."""
     return render(request, "docs/documentation.html")
 
 
-def privacy_view(request):
+def privacy_view(request: HttpRequest) -> HttpResponse:
     """Render the privacy policy HTML page."""
     return render(request, "docs/privacy.html")
 
 
-def terms_view(request):
+def terms_view(request: HttpRequest) -> HttpResponse:
     """Render the Terms of Service HTML page."""
     return render(request, "docs/terms.html")
 
 
-def contact_view(request):
+def contact_view(request: HttpRequest) -> HttpResponse:
     """Render a simple Contact Us page."""
     return render(request, "docs/contact.html")
